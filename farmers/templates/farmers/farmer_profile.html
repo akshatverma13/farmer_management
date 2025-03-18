@@ -1,0 +1,62 @@
+{% extends 'farmers/base.html' %}
+{% block content %}
+    <style>
+        .profile-container { max-width: 600px; margin: 20px auto; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .btn { padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        img { max-width: 200px; border-radius: 8px; margin-bottom: 10px; }
+        .section { margin-top: 20px; }
+    </style>
+
+    <div class="profile-container">
+        <h2>{{ farmer.name }}'s Profile</h2>
+        <p><strong>ID:</strong> {{ farmer.id }}</p>
+        <p><strong>Aadhar ID:</strong> {{ farmer.aadhar_id }}</p>
+        <p><strong>Farm Area:</strong> {{ farmer.farm_area }}</p>
+        <p><strong>Block:</strong> {{ farmer.block.name }}</p>
+        <p><strong>Surveyor:</strong> {{ farmer.surveyor.username }}</p>
+
+        <div class="section">
+            <h3>Farmer Image</h3>
+            {% if farmer.image %}
+                <img src="{{ farmer.image.url }}" alt="Farmer Image">
+            {% else %}
+                <img src="/media/farmer_images/default.jpg" alt="Default Farmer Image">
+            {% endif %}
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="file" name="image" accept="image/*" required>
+                <button type="submit" class="btn">Upload</button>
+            </form>
+        </div>
+
+        <div class="section">
+            <h3>Aadhar Image</h3>
+            {% if farmer.aadhar_image %}
+                <img src="{{ farmer.aadhar_image.url }}" alt="Aadhar Image">
+            {% else %}
+                <p>No Aadhar image uploaded yet.</p>
+            {% endif %}
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="file" name="aadhar_image" accept="image/*" required>
+                <button type="submit" class="btn">Upload</button>
+            </form>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <p style="color: green;">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+
+        <a
+            href="{% url 'surveyor_dashboard' %}"
+            style="
+              display: inline-block;
+              margin-top: 10px;
+              color: #2196f3;
+              text-decoration: none;
+            "
+        >Back to Dashboard</a>
+    </div>
+{% endblock %}

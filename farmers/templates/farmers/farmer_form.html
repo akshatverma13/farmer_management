@@ -1,0 +1,23 @@
+{% extends 'farmers/base.html' %}
+{% block content %}
+    <div style="max-width: 600px; margin: 20px auto; padding: 20px;">
+        <h2 style="color: #333;">{{ title }} Farmer</h2>
+        <form method="post" style="margin: 20px 0;">
+            {% csrf_token %}
+            {% for field in form %}
+                <div style="margin-bottom: 10px;">
+                    <label style="display: block; font-weight: bold;">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                        <span style="color: red;">{{ field.errors }}</span>
+                    {% endif %}
+                    {% if field.help_text %}
+                        <small style="color: #666;">{{ field.help_text }}</small>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            <button type="submit" style="padding: 10px 20px; background-color: #4CAF50; color: white; border: none; cursor: pointer;">Save</button>
+            <a href="{% url 'surveyor_dashboard' %}" style="padding: 10px 20px; background-color: #f44336; color: white; text-decoration: none; margin-left: 10px;">Cancel</a>
+        </form>
+    </div>
+{% endblock %}

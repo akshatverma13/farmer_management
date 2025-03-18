@@ -1,0 +1,11 @@
+{% extends 'farmers/base.html' %}
+{% block content %}
+    <h2 style="color: #333;">Welcome, {{ username }}</h2>
+    {% if user.is_superuser %}
+        <a href="{% url 'admin_dashboard' %}" style="padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none;">Go to Admin Dashboard</a>
+    {% elif user.groups.all.0.name == 'Supervisors' %}
+        <a href="{% url 'supervisor_dashboard' %}" style="padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none;">Go to Supervisor Dashboard</a>
+    {% elif user.groups.all.0.name == 'Surveyors' %}
+        <a href="{% url 'surveyor_dashboard' %}" style="padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none;">Go to Surveyor Dashboard</a>
+    {% endif %}
+{% endblock %}

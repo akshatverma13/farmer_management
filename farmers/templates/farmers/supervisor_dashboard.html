@@ -1,0 +1,229 @@
+{% extends 'farmers/base.html' %}
+{% load static %}
+{% block content %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .dashboard-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .card { background: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 20px; }
+        .search-bar { margin-bottom: 20px; }
+        .search-bar input { padding: 8px; width: 250px; border: 1px solid #ddd; border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:hover { background: #f5f5f5; }
+        .pagination { margin-top: 20px; text-align: center; }
+        .pagination a, .pagination span { padding: 8px 16px; margin: 0 5px; text-decoration: none; color: #2196F3; border: 1px solid #ddd; border-radius: 4px; }
+        .pagination .current { background: #2196F3; color: white; }
+        .per-page { margin-top: 10px; }
+        .profile-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; vertical-align: middle; }
+    </style>
+
+    <div class="dashboard-container">
+        <h2 style="color: #333;">Supervisor Dashboard - {{ supervisor_username }} - Block: {{ block_name }}</h2>
+
+        {% if error %}
+            <p style="color: red;">{{ error }}</p>
+        {% else %}
+            <div class="card">
+                <h3 style="color: #333;">Surveyors</h3>
+                <div class="search-bar">
+                    <form method="get" id="surveyor-search-form">
+                        <input type="text" name="surveyor_q" value="{{ surveyor_query }}" placeholder="Search surveyors..." id="surveyor-search-input">
+                        <input type="hidden" name="surveyor_page" value="{{ surveyor_page_obj.number }}">
+                        <input type="hidden" name="surveyor_per_page" value="{{ surveyor_per_page }}">
+                        <input type="hidden" name="farmer_q" value="{{ farmer_query }}">
+                        <input type="hidden" name="farmer_page" value="{{ farmer_page_obj.number }}">
+                        <input type="hidden" name="farmer_per_page" value="{{ farmer_per_page }}">
+                    </form>
+                </div>
+                <table>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Image</th> <!-- Added column -->
+                    </tr>
+                    {% for surveyor in surveyors %}
+                        <tr>
+                            <td><a href="{% url 'user_profile' surveyor.id %}" style="color: #2196F3; text-decoration: none;">{{ surveyor.id }}</a></td>
+                            <td>{{ surveyor.username }}</td>
+                            <td>{{ surveyor.email }}</td>
+                            <td>
+                                {% if surveyor.profile.image %}
+                                    <img src="{{ surveyor.profile.image.url }}" alt="{{ surveyor.username }}" class="profile-img">
+                                {% else %}
+                                    No Image
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4" style="text-align: center;">No surveyors found.</td>
+                        </tr>
+                    {% endfor %}
+                </table>
+
+                {% if surveyor_page_obj.paginator.num_pages > 1 %}
+                    <div class="pagination">
+                        {% if surveyor_page_obj.has_previous %}
+                            <a href="?surveyor_page={{ surveyor_page_obj.previous_page_number }}&surveyor_q={{ surveyor_query }}&surveyor_per_page={{ surveyor_per_page }}&farmer_q={{ farmer_query }}&farmer_page={{ farmer_page_obj.number }}&farmer_per_page={{ farmer_per_page }}">« Prev</a>
+                        {% endif %}
+                        {% for num in surveyor_page_obj.paginator.page_range %}
+                            <a href="?surveyor_page={{ num }}&surveyor_q={{ surveyor_query }}&surveyor_per_page={{ surveyor_per_page }}&farmer_q={{ farmer_query }}&farmer_page={{ farmer_page_obj.number }}&farmer_per_page={{ farmer_per_page }}" class="{% if surveyor_page_obj.number == num %}current{% endif %}">{{ num }}</a>
+                        {% endfor %}
+                        {% if surveyor_page_obj.has_next %}
+                            <a href="?surveyor_page={{ surveyor_page_obj.next_page_number }}&surveyor_q={{ surveyor_query }}&surveyor_per_page={{ surveyor_per_page }}&farmer_q={{ farmer_query }}&farmer_page={{ farmer_page_obj.number }}&farmer_per_page={{ farmer_per_page }}">Next »</a>
+                        {% endif %}
+                    </div>
+                    <div class="per-page">
+                        <form method="get">
+                            <label for="surveyor_per_page">Surveyors per page:</label>
+                            <select name="surveyor_per_page" onchange="this.form.submit()">
+                                <option value="5" {% if surveyor_per_page == 5 %}selected{% endif %}>5</option>
+                                <option value="10" {% if surveyor_per_page == 10 %}selected{% endif %}>10</option>
+                                <option value="25" {% if surveyor_per_page == 25 %}selected{% endif %}>25</option>
+                                <option value="50" {% if surveyor_per_page == 50 %}selected{% endif %}>50</option>
+                            </select>
+                            <input type="hidden" name="surveyor_q" value="{{ surveyor_query }}">
+                            <input type="hidden" name="surveyor_page" value="1">
+                            <input type="hidden" name="farmer_q" value="{{ farmer_query }}">
+                            <input type="hidden" name="farmer_page" value="{{ farmer_page_obj.number }}">
+                            <input type="hidden" name="farmer_per_page" value="{{ farmer_per_page }}">
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="card">
+                <h3 style="color: #333;">Farmers</h3>
+                <div class="search-bar">
+                    <form method="get" id="farmer-search-form">
+                        <input type="text" name="farmer_q" value="{{ farmer_query }}" placeholder="Search farmers..." id="farmer-search-input">
+                        <input type="hidden" name="farmer_page" value="{{ farmer_page_obj.number }}">
+                        <input type="hidden" name="farmer_per_page" value="{{ farmer_per_page }}">
+                        <input type="hidden" name="surveyor_q" value="{{ surveyor_query }}">
+                        <input type="hidden" name="surveyor_page" value="{{ surveyor_page_obj.number }}">
+                        <input type="hidden" name="farmer_per_page" value="{{ farmer_per_page }}">
+                    </form>
+                </div>
+                <table>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Aadhar ID</th>
+                        <th>Farm Area</th>
+                        <th>Block</th>
+                        <th>Image</th> <!-- Added column -->
+                        <th>Aadhar Image</th> <!-- Added column -->
+                    </tr>
+                    {% for farmer in farmers %}
+                        <tr>
+                            <td><a href="{% url 'farmer_profile' farmer.id %}" style="color: #2196F3; text-decoration: none;">{{ farmer.id }}</a></td>
+                            <td>{{ farmer.name }}</td>
+                            <td>{{ farmer.aadhar_id }}</td>
+                            <td>{{ farmer.farm_area }}</td>
+                            <td>{{ farmer.block }}</td>
+                            <td>
+                                {% if farmer.image %}
+                                    <img src="{{ farmer.image.url }}" alt="{{ farmer.name }}" class="profile-img">
+                                {% else %}
+                                    No Image
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if farmer.aadhar_image %}
+                                    <img src="{{ farmer.aadhar_image.url }}" alt="Aadhar" class="profile-img">
+                                {% else %}
+                                    No Image
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" style="text-align: center;">No farmers found.</td>
+                        </tr>
+                    {% endfor %}
+                </table>
+
+                {% if farmer_page_obj.paginator.num_pages > 1 %}
+                    <div class="pagination">
+                        {% if farmer_page_obj.has_previous %}
+                            <a href="?farmer_page={{ farmer_page_obj.previous_page_number }}&farmer_q={{ farmer_query }}&farmer_per_page={{ farmer_per_page }}&surveyor_q={{ surveyor_query }}&surveyor_page={{ surveyor_page_obj.number }}&surveyor_per_page={{ surveyor_per_page }}">« Prev</a>
+                        {% endif %}
+                        {% for num in farmer_page_obj.paginator.page_range %}
+                            <a href="?farmer_page={{ num }}&farmer_q={{ farmer_query }}&farmer_per_page={{ farmer_per_page }}&surveyor_q={{ surveyor_query }}&surveyor_page={{ surveyor_page_obj.number }}&surveyor_per_page={{ surveyor_per_page }}" class="{% if farmer_page_obj.number == num %}current{% endif %}">{{ num }}</a>
+                        {% endfor %}
+                        {% if farmer_page_obj.has_next %}
+                            <a href="?farmer_page={{ farmer_page_obj.next_page_number }}&farmer_q={{ farmer_query }}&farmer_per_page={{ farmer_per_page }}&surveyor_q={{ surveyor_query }}&surveyor_page={{ surveyor_page_obj.number }}&surveyor_per_page={{ surveyor_per_page }}">Next »</a>
+                        {% endif %}
+                    </div>
+                    <div class="per-page">
+                        <form method="get">
+                            <label for="farmer_per_page">Farmers per page:</label>
+                            <select name="farmer_per_page" onchange="this.form.submit()">
+                                <option value="5" {% if farmer_per_page == 5 %}selected{% endif %}>5</option>
+                                <option value="10" {% if farmer_per_page == 10 %}selected{% endif %}>10</option>
+                                <option value="25" {% if farmer_per_page == 25 %}selected{% endif %}>25</option>
+                                <option value="50" {% if farmer_per_page == 50 %}selected{% endif %}>50</option>
+                            </select>
+                            <input type="hidden" name="farmer_q" value="{{ farmer_query }}">
+                            <input type="hidden" name="farmer_page" value="1">
+                            <input type="hidden" name="surveyor_q" value="{{ surveyor_query }}">
+                            <input type="hidden" name="surveyor_page" value="{{ surveyor_page_obj.number }}">
+                            <input type="hidden" name="surveyor_per_page" value="{{ surveyor_per_page }}">
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script>
+            $('#surveyor-search-input').on('input', function() {
+                let surveyor_query = $(this).val();
+                let surveyor_per_page = $('select[name="surveyor_per_page"]').val() || {{ surveyor_per_page }};
+                let farmer_query = $('#farmer-search-input').val();
+                let farmer_per_page = $('select[name="farmer_per_page"]').val() || {{ farmer_per_page }};
+                $.ajax({
+                    url: '',
+                    data: {
+                        'surveyor_q': surveyor_query,
+                        'surveyor_per_page': surveyor_per_page,
+                        'surveyor_page': 1,
+                        'farmer_q': farmer_query,
+                        'farmer_per_page': farmer_per_page,
+                        'farmer_page': {{ farmer_page_obj.number }}
+                    },
+                    success: function(data) {
+                        $('#surveyor-search-form').closest('.card').find('table').html($(data).find('#surveyor-search-form').closest('.card').find('table').html());
+                        $('#surveyor-search-form').closest('.card').find('.pagination').html($(data).find('#surveyor-search-form').closest('.card').find('.pagination').html());
+                        $('#surveyor-search-form').closest('.card').find('.per-page').html($(data).find('#surveyor-search-form').closest('.card').find('.per-page').html());
+                    }
+                });
+            });
+
+            $('#farmer-search-input').on('input', function() {
+                let farmer_query = $(this).val();
+                let farmer_per_page = $('select[name="farmer_per_page"]').val() || {{ farmer_per_page }};
+                let surveyor_query = $('#surveyor-search-input').val();
+                let surveyor_per_page = $('select[name="surveyor_per_page"]').val() || {{ surveyor_per_page }};
+                $.ajax({
+                    url: '',
+                    data: {
+                        'farmer_q': farmer_query,
+                        'farmer_per_page': farmer_per_page,
+                        'farmer_page': 1,
+                        'surveyor_q': surveyor_query,
+                        'surveyor_per_page': surveyor_per_page,
+                        'surveyor_page': {{ surveyor_page_obj.number }}
+                    },
+                    success: function(data) {
+                        $('#farmer-search-form').closest('.card').find('table').html($(data).find('#farmer-search-form').closest('.card').find('table').html());
+                        $('#farmer-search-form').closest('.card').find('.pagination').html($(data).find('#farmer-search-form').closest('.card').find('.pagination').html());
+                        $('#farmer-search-form').closest('.card').find('.per-page').html($(data).find('#farmer-search-form').closest('.card').find('.per-page').html());
+                    }
+                });
+            });
+        </script>
+    </div>
+{% endblock %}

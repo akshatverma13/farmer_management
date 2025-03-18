@@ -1,0 +1,295 @@
+{% extends 'farmers/base.html' %}
+{% load static %}
+{% block content %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .dashboard-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .btn { padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .btn:hover { background-color: #45a049; }
+        .search-bar { margin-bottom: 20px; }
+        .search-bar input { padding: 8px; width: 250px; border: 1px solid #ddd; border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:hover { background: #f5f5f5; }
+        .pagination { margin-top: 20px; text-align: center; }
+        .pagination a, .pagination span { padding: 8px 16px; margin: 0 5px; text-decoration: none; color: #2196F3; border: 1px solid #ddd; border-radius: 4px; }
+        .pagination .current { background: #2196F3; color: white; }
+        .per-page { margin-top: 10px; }
+        select { padding: 8px; margin-right: 10px; border: 1px solid #ddd; border-radius: 4px; }
+    </style>
+
+    <div class="dashboard-container">
+        <h2 style="color: #333;">Admin Dashboard</h2>
+        <div style="margin-bottom: 20px;">
+            <button onclick="window.location.href='{% url 'user_create' %}'" class="btn"><i class="fas fa-user-plus"></i> Create User</button>
+            <button onclick="window.location.href='{% url 'block_create' %}'" class="btn" style="margin-left: 10px;"><i class="fas fa-plus"></i> Create Block</button>
+        </div>
+
+        <!-- Filter Section with Multilevel Dropdowns -->
+        <form method="post" style="margin: 20px 0;" id="filter-form">
+            {% csrf_token %}
+            <label for="role">Roles:</label>
+            <select name="role" id="role" data-selected="{{ selected_role }}">
+                <option value="" {% if not selected_role %}selected{% endif %}>Select role</option>
+                {% for role in all_roles %}
+                    <option value="{{ role }}" {% if selected_role == role %}selected{% endif %}>{{ role }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="block" style="margin-left: 20px;">Blocks:</label>
+            <select name="block" id="block" data-selected="{{ selected_block }}">
+                <option value="" {% if not selected_block %}selected{% endif %}>Please select role first</option>
+                {% if selected_role and selected_block %}
+                    <option value="{{ selected_block }}" selected>{{ selected_block }}</option>
+                {% endif %}
+            </select>
+
+            <button type="submit" class="btn" style="margin-left: 20px;">Search</button>
+        </form>
+
+        <div class="search-bar">
+            <form method="get" id="user-search-form">
+                <input type="text" name="user_q" value="{{ user_query }}" placeholder="Search users..." id="user-search-input">
+                <input type="hidden" name="user_page" value="{{ user_page_obj.number }}">
+                <input type="hidden" name="user_per_page" value="{{ user_per_page }}">
+                <input type="hidden" name="block_q" value="{{ block_query }}">
+                <input type="hidden" name="block_page" value="{{ block_page_obj.number }}">
+                <input type="hidden" name="block_per_page" value="{{ block_per_page }}">
+            </form>
+        </div>
+
+        <h3 style="color: #333;">Users</h3>
+        <table id="user-table">
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Block</th>
+                <th>Actions</th>
+            </tr>
+            {% for user in users %}
+                <tr>
+                    <td><a href="{% url 'user_profile' user.id %}" style="color: #2196F3; text-decoration: none;">{{ user.id }}</a></td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.role }}</td>
+                    <td>{{ user.block|default:"None" }}</td>
+                    <td>
+                        {% if not user.role == "Admin" %}
+                            <a href="{% url 'user_update' user.id %}" style="color: #2196F3; text-decoration: none;">Edit</a> |
+                            <a href="{% url 'user_delete' user.id %}" onclick="return confirm('Are you sure you want to delete this user?')" style="color: #f44336; text-decoration: none;">Delete</a>
+                        {% else %}
+                            <span style="color: #666;">No actions available</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center;">No users found.</td>
+                </tr>
+            {% endfor %}
+        </table>
+
+        {% if user_page_obj.paginator.num_pages > 1 %}
+            <div class="pagination" id="user-pagination">
+                {% if user_page_obj.has_previous %}
+                    <a href="?user_page={{ user_page_obj.previous_page_number }}&user_q={{ user_query }}&user_per_page={{ user_per_page }}&block_q={{ block_query }}&block_page={{ block_page_obj.number }}&block_per_page={{ block_per_page }}">« Prev</a>
+                {% endif %}
+                {% for num in user_page_obj.paginator.page_range %}
+                    <a href="?user_page={{ num }}&user_q={{ user_query }}&user_per_page={{ user_per_page }}&block_q={{ block_query }}&block_page={{ block_page_obj.number }}&block_per_page={{ block_per_page }}" class="{% if user_page_obj.number == num %}current{% endif %}">{{ num }}</a>
+                {% endfor %}
+                {% if user_page_obj.has_next %}
+                    <a href="?user_page={{ user_page_obj.next_page_number }}&user_q={{ user_query }}&user_per_page={{ user_per_page }}&block_q={{ block_query }}&block_page={{ block_page_obj.number }}&block_per_page={{ block_per_page }}">Next »</a>
+                {% endif %}
+            </div>
+            <div class="per-page" id="user-per-page">
+                <form method="get">
+                    <label for="user_per_page">Users per page:</label>
+                    <select name="user_per_page" onchange="this.form.submit()">
+                        <option value="5" {% if user_per_page == 5 %}selected{% endif %}>5</option>
+                        <option value="10" {% if user_per_page == 10 %}selected{% endif %}>10</option>
+                        <option value="25" {% if user_per_page == 25 %}selected{% endif %}>25</option>
+                        <option value="50" {% if user_per_page == 50 %}selected{% endif %}>50</option>
+                    </select>
+                    <input type="hidden" name="user_q" value="{{ user_query }}">
+                    <input type="hidden" name="user_page" value="1">
+                    <input type="hidden" name="block_q" value="{{ block_query }}">
+                    <input type="hidden" name="block_page" value="{{ block_page_obj.number }}">
+                    <input type="hidden" name="block_per_page" value="{{ block_per_page }}">
+                </form>
+            </div>
+        {% endif %}
+
+        <div class="search-bar">
+            <form method="get" id="block-search-form">
+                <input type="text" name="block_q" value="{{ block_query }}" placeholder="Search blocks..." id="block-search-input">
+                <input type="hidden" name="block_page" value="{{ block_page_obj.number }}">
+                <input type="hidden" name="block_per_page" value="{{ block_per_page }}">
+                <input type="hidden" name="user_q" value="{{ user_query }}">
+                <input type="hidden" name="user_page" value="{{ user_page_obj.number }}">
+                <input type="hidden" name="user_per_page" value="{{ user_per_page }}">
+            </form>
+        </div>
+
+        <h3 style="color: #333;">Blocks</h3>
+        <table id="block-table">
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Supervisor</th>
+                <th>Surveyors</th>
+                <th>Actions</th>
+            </tr>
+            {% for block in blocks %}
+                <tr>
+                    <td>{{ block.id }}</td>
+                    <td>{{ block.name }}</td>
+                    <td>{{ block.supervisor|default:"None" }}</td>
+                    <td>{{ block.surveyors|join:", "|default:"None" }}</td>
+                    <td>
+                        <a href="{% url 'block_update' block.id %}" style="color: #2196F3; text-decoration: none;">Edit</a> |
+                        <a href="{% url 'block_delete' block.id %}" onclick="return confirm('Are you sure you want to delete this block?')" style="color: #f44336; text-decoration: none;">Delete</a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center;">No blocks found.</td>
+                </tr>
+            {% endfor %}
+        </table>
+
+        {% if block_page_obj.paginator.num_pages > 1 %}
+            <div class="pagination" id="block-pagination">
+                {% if block_page_obj.has_previous %}
+                    <a href="?block_page={{ block_page_obj.previous_page_number }}&block_q={{ block_query }}&block_per_page={{ block_per_page }}&user_q={{ user_query }}&user_page={{ user_page_obj.number }}&user_per_page={{ user_per_page }}">« Prev</a>
+                {% endif %}
+                {% for num in block_page_obj.paginator.page_range %}
+                    <a href="?block_page={{ num }}&block_q={{ block_query }}&block_per_page={{ block_per_page }}&user_q={{ user_query }}&user_page={{ user_page_obj.number }}&user_per_page={{ user_per_page }}" class="{% if block_page_obj.number == num %}current{% endif %}">{{ num }}</a>
+                {% endfor %}
+                {% if block_page_obj.has_next %}
+                    <a href="?block_page={{ block_page_obj.next_page_number }}&block_q={{ block_query }}&block_per_page={{ block_per_page }}&user_q={{ user_query }}&user_page={{ user_page_obj.number }}&user_per_page={{ user_per_page }}">Next »</a>
+                {% endif %}
+            </div>
+            <div class="per-page" id="block-per-page">
+                <form method="get">
+                    <label for="block_per_page">Blocks per page:</label>
+                    <select name="block_per_page" onchange="this.form.submit()">
+                        <option value="5" {% if block_per_page == 5 %}selected{% endif %}>5</option>
+                        <option value="10" {% if block_per_page == 10 %}selected{% endif %}>10</option>
+                        <option value="25" {% if block_per_page == 25 %}selected{% endif %}>25</option>
+                        <option value="50" {% if block_per_page == 50 %}selected{% endif %}>50</option>
+                    </select>
+                    <input type="hidden" name="block_q" value="{{ block_query }}">
+                    <input type="hidden" name="block_page" value="1">
+                    <input type="hidden" name="user_q" value="{{ user_query }}">
+                    <input type="hidden" name="user_page" value="{{ user_page_obj.number }}">
+                    <input type="hidden" name="user_per_page" value="{{ user_per_page }}">
+                </form>
+            </div>
+        {% endif %}
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script type="text/javascript">
+        $(document).ready(function() {
+            console.log('jQuery loaded');
+
+            // Parse role-block data
+            var roleBlockData = {{ role_block_data|safe }};
+            console.log('roleBlockData:', roleBlockData);
+
+            // Multilevel dropdown logic
+            var $roleSel = $('#role');
+            var $blockSel = $('#block');
+
+            $roleSel.on('change', function() {
+                var role = $(this).val();
+                console.log('Selected role:', role);
+                $blockSel.empty().append('<option value="">Please select role first</option>');
+
+                if (role && roleBlockData[role]) {
+                    var blocks = roleBlockData[role];
+                    console.log('Blocks for role:', blocks);
+                    $.each(blocks, function(index, block) {
+                        $blockSel.append($('<option>', {
+                            value: block,
+                            text: block
+                        }));
+                    });
+                    // Restore selected block if present
+                    var selectedBlock = $blockSel.data('selected');
+                    if (selectedBlock && blocks.includes(selectedBlock)) {
+                        $blockSel.val(selectedBlock);
+                    }
+                }
+            });
+
+            // Trigger change on page load to populate blocks if a role is selected
+            if ($roleSel.data('selected')) {
+                $roleSel.trigger('change');
+            }
+
+            // AJAX search for users
+            $('#user-search-input').on('input', function() {
+                console.log('User search triggered');
+                var user_query = $(this).val();
+                var user_per_page = $('select[name="user_per_page"]').val() || {{ user_per_page }};
+                var block_query = $('#block-search-input').val();
+                var block_per_page = $('select[name="block_per_page"]').val() || {{ block_per_page }};
+                $.ajax({
+                    url: '',
+                    method: 'GET',
+                    data: {
+                        'user_q': user_query,
+                        'user_per_page': user_per_page,
+                        'user_page': 1,
+                        'block_q': block_query,
+                        'block_per_page': block_per_page,
+                        'block_page': {{ block_page_obj.number }}
+                    },
+                    success: function(data) {
+                        console.log('User AJAX success');
+                        $('#user-table').html($(data).find('#user-table').html());
+                        $('#user-pagination').html($(data).find('#user-pagination').html());
+                        $('#user-per-page').html($(data).find('#user-per-page').html());
+                    },
+                    error: function(xhr, status, error) {
+                        console.log('User AJAX error:', error);
+                    }
+                });
+            });
+
+            // AJAX search for blocks
+            $('#block-search-input').on('input', function() {
+                console.log('Block search triggered');
+                var block_query = $(this).val();
+                var block_per_page = $('select[name="block_per_page"]').val() || {{ block_per_page }};
+                var user_query = $('#user-search-input').val();
+                var user_per_page = $('select[name="user_per_page"]').val() || {{ user_per_page }};
+                $.ajax({
+                    url: '',
+                    method: 'GET',
+                    data: {
+                        'block_q': block_query,
+                        'block_per_page': block_per_page,
+                        'block_page': 1,
+                        'user_q': user_query,
+                        'user_per_page': user_per_page,
+                        'user_page': {{ user_page_obj.number }}
+                    },
+                    success: function(data) {
+                        console.log('Block AJAX success');
+                        $('#block-table').html($(data).find('#block-table').html());
+                        $('#block-pagination').html($(data).find('#block-pagination').html());
+                        $('#block-per-page').html($(data).find('#block-per-page').html());
+                    },
+                    error: function(xhr, status, error) {
+                        console.log('Block AJAX error:', error);
+                    }
+                });
+            });
+        });
+    </script>
+{% endblock %}

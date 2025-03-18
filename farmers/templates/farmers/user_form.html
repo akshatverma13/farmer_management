@@ -1,0 +1,49 @@
+{% extends 'farmers/base.html' %}
+{% block content %}
+    <h2 style="color: #333;">{{ title }} User</h2>
+    <form method="post" style="margin: 20px 0;">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div style="color: red; margin-bottom: 10px;">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+        <div style="margin-bottom: 10px;">
+            <label style="display: block; font-weight: bold;">Username</label>
+            {{ form.username }}
+            {% if form.username.errors %}
+                <span style="color: red;">{{ form.username.errors }}</span>
+            {% endif %}
+        </div>
+        <div style="margin-bottom: 10px;">
+            <label style="display: block; font-weight: bold;">Email</label>
+            {{ form.email }}
+            {% if form.email.errors %}
+                <span style="color: red;">{{ form.email.errors }}</span>
+            {% endif %}
+        </div>
+        <div style="margin-bottom: 10px;">
+            <label style="display: block; font-weight: bold;">Role</label>
+            {{ form.group }}
+            {% if form.group.errors %}
+                <span style="color: red;">{{ form.group.errors }}</span>
+            {% endif %}
+        </div>
+        <div style="margin-bottom: 10px;">
+            <label style="display: block; font-weight: bold;">Block</label>
+            {{ form.block }}
+            {% if form.block.errors %}
+                <span style="color: red;">{{ form.block.errors }}</span>
+            {% endif %}
+        </div>
+        <div style="margin-bottom: 10px;">
+            <label style="display: block; font-weight: bold;">Password</label>
+            {{ form.password }}
+            {% if form.password.errors %}
+                <span style="color: red;">{{ form.password.errors }}</span>
+            {% endif %}
+        </div>
+        <button type="submit" style="padding: 10px 20px; background-color: #4CAF50; color: white; border: none; cursor: pointer;">Save</button>
+        <a href="{% url 'admin_dashboard' %}" style="padding: 10px 20px; background-color: #f44336; color: white; text-decoration: none; margin-left: 10px;">Cancel</a>
+    </form>
+{% endblock %}

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Farmers Management</title>
+</head>
+<body style="font-family: Arial, sans-serif; margin: 20px;">
+    <nav style="margin-bottom: 20px;">
+        <a href="{% url 'home' %}" style="margin-right: 10px; text-decoration: none; color: blue;">Home</a>
+        {% if user.is_authenticated %}
+            {% if user.is_superuser %}
+                <a href="{% url 'admin_dashboard' %}" style="margin-right: 10px; text-decoration: none; color: blue;">Admin Dashboard</a>
+            {% elif user.groups.all.0.name == 'Supervisors' %}
+                <a href="{% url 'supervisor_dashboard' %}" style="margin-right: 10px; text-decoration: none; color: blue;">Supervisor Dashboard</a>
+            {% elif user.groups.all.0.name == 'Surveyors' %}
+                <a href="{% url 'surveyor_dashboard' %}" style="margin-right: 10px; text-decoration: none; color: blue;">Surveyor Dashboard</a>
+            {% endif %}
+            <a href="{% url 'logout' %}" style="margin-right: 10px; text-decoration: none; color: blue;">Logout</a>
+        {% else %}
+            <a href="{% url 'login' %}" style="margin-right: 10px; text-decoration: none; color: blue;">Login</a>
+        {% endif %}
+    </nav>
+    <div style="max-width: 800px; margin: auto;">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>
