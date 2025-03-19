@@ -16,6 +16,7 @@ from django.contrib import messages
 from django import forms
 from .models import Farmer
 from .forms import UserProfileForm, FarmerForm, FarmerImageForm, FarmerAadharForm, ChangePasswordForm
+from django.utils import timezone
 # Token generator
 def generate_token():
     return uuid.uuid4().hex  # 32-char token
@@ -415,56 +416,24 @@ def surveyor_dashboard(request):
         'per_page': per_page
     })
 
-# def surveyor_dashboard(request):
-#     if not request.user.is_authenticated or not request.user.groups.filter(name='Surveyors').exists():
-#         return redirect('login')
-#     block = request.user.profile.block
-#     if not block:
-#         return render(request, 'farmers/surveyor_dashboard.html', {'error': 'No block assigned'})
-    
-#     # Farmers (ordered by id)
-#     farmers = Farmer.objects.filter(surveyor=request.user).order_by('id')
-    
-#     # Handle block filter from POST
-#     selected_block = request.POST.get('block', '')
-#     if request.method == 'POST' and selected_block:
-#         farmers = farmers.filter(block__name=selected_block)
-    
-#     # Existing search query
-#     query = request.GET.get('q', '')
-#     if query:
-#         farmers = farmers.filter(
-#             Q(name__icontains=query) |
-#             Q(aadhar_id__icontains=query) |
-#             Q(block__name__icontains=query) |
-#             Q(farm_area__icontains=query)
-#         )
-    
-#     per_page = int(request.GET.get('per_page', 10))
-#     paginator = Paginator(farmers, per_page)
-#     page_number = request.GET.get('page', 1)
-#     page_obj = paginator.get_page(page_number)
-    
-#     farmer_data = [
-#         {'id': f.id, 'name': f.name, 'aadhar_id': f.aadhar_id, 'farm_area': f.farm_area, 'block': f.block.name}
-#         for f in page_obj
-#     ]
-    
-#     # Data for block dropdown
-#     all_blocks = Block.objects.filter(assigned_users__user=request.user).values_list('name', flat=True).distinct()
-#     block_data = list(all_blocks)
-    
-#     return render(request, 'farmers/surveyor_dashboard.html', {
-#         'block_name': block.name,
-#         'surveyor_username': request.user.username,
-#         'farmers': farmer_data,
-#         'query': query,
-#         'page_obj': page_obj,
-#         'per_page': per_page,
-#         'block_data': json.dumps(block_data),  # Pass as JSON string
-#         'selected_block': selected_block
-#     })
 
+# def farmer_create(request):
+#     if not request.user.is_authenticated or not is_surveyor(request.user):
+#         return redirect('login')
+    
+#     if request.method == 'POST':
+#         form = FarmerForm(request.POST, surveyor=request.user)
+#         if form.is_valid():
+#             farmer = form.save(commit=False)
+#             farmer.surveyor = request.user
+#             farmer.created_by = request.user  # Set creator
+#             farmer.last_updated_by = request.user  # Set updater
+#             farmer.save()
+#             return redirect('surveyor_dashboard')
+#         return render(request, 'farmers/farmer_form.html', {'form': form, 'title': 'Create'})
+#     else:
+#         form = FarmerForm(surveyor=request.user)
+#     return render(request, 'farmers/farmer_form.html', {'form': form, 'title': 'Create'})
 def farmer_create(request):
     if not request.user.is_authenticated or not is_surveyor(request.user):
         return redirect('login')
@@ -474,8 +443,9 @@ def farmer_create(request):
         if form.is_valid():
             farmer = form.save(commit=False)
             farmer.surveyor = request.user
-            farmer.created_by = request.user  # Set creator
-            farmer.last_updated_by = request.user  # Set updater
+            farmer.created_by = request.user
+            farmer.last_updated_by = request.user
+            farmer.created_at = timezone.now()  # Set created_at
             farmer.save()
             return redirect('surveyor_dashboard')
         return render(request, 'farmers/farmer_form.html', {'form': form, 'title': 'Create'})

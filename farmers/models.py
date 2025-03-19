@@ -42,7 +42,7 @@ class Farmer(models.Model):
     block = models.ForeignKey('Block', on_delete=models.CASCADE, related_name='farmers')
     surveyor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='farmers')
     farm_area = models.FloatField()
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField()
     last_updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='farmers_created')
     last_updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='farmers_updated')

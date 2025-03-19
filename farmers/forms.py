@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth.models import User, Group
 from django.core.validators import RegexValidator
 from .models import Block, Farmer, UserProfile
+from django.utils import timezone
 
 class UserProfileForm(forms.ModelForm):
     class Meta:
@@ -89,8 +90,8 @@ class BlockUpdateForm(forms.ModelForm):
 class FarmerForm(forms.ModelForm):
     aadhar_id = forms.CharField(
         max_length=12,
-        min_length=12,  # 12 digits
-        required=True,  # Mandatory field
+        min_length=12,
+        required=True,
         validators=[RegexValidator(r'^\d{12}$', 'Aadhar ID must be a 12-digit number.')],
         error_messages={
             'required': 'Aadhar ID is required.',
@@ -131,6 +132,14 @@ class FarmerForm(forms.ModelForm):
         if not aadhar_id.isdigit() or len(aadhar_id) != 12:
             raise forms.ValidationError('Aadhar ID must be exactly 12 digits (numbers only).')
         return aadhar_id
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if not instance.created_at:  # Set created_at if not already set
+            instance.created_at = timezone.now()
+        if commit:
+            instance.save()
+        return instance
     
 
 
