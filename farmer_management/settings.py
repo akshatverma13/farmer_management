@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'farmers',
     'django_filters',
+    'django_celery_beat',
 ]
 # AUTH_USER_MODEL = 'farmers.Users'
 
@@ -139,3 +140,19 @@ SESSION_SAVE_EVERY_REQUEST = True  # Refresh session on every request
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Celery Configuration
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Redis as broker
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'  # Redis for results
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
+# Celery Beat for scheduling
+CELERY_BEAT_SCHEDULE = {
+    'update-daily-farmer-counts': {
+        'task': 'farmers.tasks.update_daily_farmer_counts',
+        'schedule': 86400.0,  # Run every 24 hours (in seconds)
+        'args': ()
+    },
+}
