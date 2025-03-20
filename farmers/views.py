@@ -17,6 +17,12 @@ from django import forms
 from .models import Farmer
 from .forms import UserProfileForm, FarmerForm, FarmerImageForm, FarmerAadharForm, ChangePasswordForm
 from django.utils import timezone
+from django.db import IntegrityError
+import redis
+
+# Initialize Redis connection
+r = redis.Redis(host='localhost', port=6379, db=0)
+
 # Token generator
 def generate_token():
     return uuid.uuid4().hex  # 32-char token
@@ -84,17 +90,17 @@ def admin_dashboard(request):
         )
     
     # Handle cascading filters from POST
-    selected_role = request.POST.get('role', '')
-    selected_block = request.POST.get('block', '')
+    selected_roles = request.POST.getlist('role')  # Get multiple roles
+    selected_blocks = request.POST.getlist('block')  # Get multiple blocks
     
     if request.method == 'POST':
-        if selected_role:
-            if selected_role == 'Admin':
+        if selected_roles:
+            if 'Admin' in selected_roles:
                 users = users.filter(is_superuser=True)
             else:
-                users = users.filter(groups__name=selected_role)
-        if selected_block:
-            users = users.filter(profile__block__name=selected_block)
+                users = users.filter(groups__name__in=selected_roles)
+        if selected_blocks:
+            users = users.filter(profile__block__name__in=selected_blocks)
     
     user_per_page = int(request.GET.get('user_per_page', 10))
     user_paginator = Paginator(users, user_per_page)
@@ -119,15 +125,14 @@ def admin_dashboard(request):
             Q(id__icontains=block_query)
         )
     if request.method == 'POST':
-        if selected_block:
-            blocks = blocks.filter(name=selected_block)
-        elif selected_role:
-            if selected_role == 'Admin':
-                # Filter blocks where assigned_users' related users are Admins
+        if selected_blocks:
+            blocks = blocks.filter(name__in=selected_blocks)
+        elif selected_roles:
+            if 'Admin' in selected_roles:
                 admin_profiles = UserProfile.objects.filter(user__is_superuser=True)
                 blocks = blocks.filter(assigned_users__in=admin_profiles)
             else:
-                blocks = blocks.filter(assigned_users__user__groups__name=selected_role)
+                blocks = blocks.filter(assigned_users__user__groups__name__in=selected_roles)
     
     block_per_page = int(request.GET.get('block_per_page', 10))
     block_paginator = Paginator(blocks, block_per_page)
@@ -164,8 +169,8 @@ def admin_dashboard(request):
         'block_per_page': block_per_page,
         'all_roles': all_roles,
         'role_block_data': json.dumps(role_block_data),
-        'selected_role': selected_role,
-        'selected_block': selected_block
+        'selected_roles': selected_roles,  # Pass list of selected roles
+        'selected_blocks': selected_blocks  # Pass list of selected blocks
     })
 
 class ChangePasswordForm(forms.Form):
@@ -416,7 +421,6 @@ def surveyor_dashboard(request):
         'per_page': per_page
     })
 
-
 # def farmer_create(request):
 #     if not request.user.is_authenticated or not is_surveyor(request.user):
 #         return redirect('login')
@@ -426,14 +430,16 @@ def surveyor_dashboard(request):
 #         if form.is_valid():
 #             farmer = form.save(commit=False)
 #             farmer.surveyor = request.user
-#             farmer.created_by = request.user  # Set creator
-#             farmer.last_updated_by = request.user  # Set updater
+#             farmer.created_by = request.user
+#             farmer.last_updated_by = request.user
+#             farmer.created_at = timezone.now()  # Set created_at
 #             farmer.save()
 #             return redirect('surveyor_dashboard')
 #         return render(request, 'farmers/farmer_form.html', {'form': form, 'title': 'Create'})
 #     else:
 #         form = FarmerForm(surveyor=request.user)
 #     return render(request, 'farmers/farmer_form.html', {'form': form, 'title': 'Create'})
+
 def farmer_create(request):
     if not request.user.is_authenticated or not is_surveyor(request.user):
         return redirect('login')
@@ -441,13 +447,26 @@ def farmer_create(request):
     if request.method == 'POST':
         form = FarmerForm(request.POST, surveyor=request.user)
         if form.is_valid():
-            farmer = form.save(commit=False)
-            farmer.surveyor = request.user
-            farmer.created_by = request.user
-            farmer.last_updated_by = request.user
-            farmer.created_at = timezone.now()  # Set created_at
-            farmer.save()
-            return redirect('surveyor_dashboard')
+            aadhar_id = form.cleaned_data['aadhar_id']
+            lock_key = f"lock:farmer:{aadhar_id}"
+            if r.set(lock_key, "1", ex=20, nx=True):
+                try:
+                    farmer = form.save(commit=False)
+                    farmer.surveyor = request.user
+                    farmer.created_by = request.user
+                    farmer.last_updated_by = request.user
+                    farmer.created_at = timezone.now()
+                    farmer.save()
+                    messages.success(request, "Farmer created successfully!")
+                    return redirect('surveyor_dashboard')
+                except IntegrityError:
+                    messages.error(request, "A farmer with this Aadhar ID already exists.")
+                    return render(request, 'farmers/farmer_form.html', {'form': form, 'title': 'Create'})
+                finally:
+                    r.delete(lock_key)
+            else:
+                messages.error(request, "Another request is processing this Aadhar ID. Please try again.")
+                return render(request, 'farmers/farmer_form.html', {'form': form, 'title': 'Create'})
         return render(request, 'farmers/farmer_form.html', {'form': form, 'title': 'Create'})
     else:
         form = FarmerForm(surveyor=request.user)

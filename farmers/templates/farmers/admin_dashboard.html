@@ -2,6 +2,8 @@
 {% load static %}
 {% block content %}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Add Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
         .dashboard-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         .btn { padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
@@ -17,6 +19,9 @@
         .pagination .current { background: #2196F3; color: white; }
         .per-page { margin-top: 10px; }
         select { padding: 8px; margin-right: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        /* Style for Select2 */
+        .select2-container { width: 200px !important; display: inline-block; margin-right: 20px; }
+        .select2-selection__choice { background-color: #4CAF50 !important; color: white !important; }
     </style>
 
     <div class="dashboard-container">
@@ -26,23 +31,23 @@
             <button onclick="window.location.href='{% url 'block_create' %}'" class="btn" style="margin-left: 10px;"><i class="fas fa-plus"></i> Create Block</button>
         </div>
 
-        <!-- Filter Section with Multilevel Dropdowns -->
+        <!-- Filter Section with Multiselect Dropdowns -->
         <form method="post" style="margin: 20px 0;" id="filter-form">
             {% csrf_token %}
             <label for="role">Roles:</label>
-            <select name="role" id="role" data-selected="{{ selected_role }}">
-                <option value="" {% if not selected_role %}selected{% endif %}>Select role</option>
+            <select name="role" id="role" multiple>
+                <option value="">Select roles</option>
                 {% for role in all_roles %}
-                    <option value="{{ role }}" {% if selected_role == role %}selected{% endif %}>{{ role }}</option>
+                    <option value="{{ role }}" {% if role in selected_roles %}selected{% endif %}>{{ role }}</option>
                 {% endfor %}
             </select>
 
             <label for="block" style="margin-left: 20px;">Blocks:</label>
-            <select name="block" id="block" data-selected="{{ selected_block }}">
-                <option value="" {% if not selected_block %}selected{% endif %}>Please select role first</option>
-                {% if selected_role and selected_block %}
-                    <option value="{{ selected_block }}" selected>{{ selected_block }}</option>
-                {% endif %}
+            <select name="block" id="block" multiple>
+                <option value="">Please select role(s) first</option>
+                {% for block in selected_blocks %}
+                    <option value="{{ block }}" selected>{{ block }}</option>
+                {% endfor %}
             </select>
 
             <button type="submit" class="btn" style="margin-left: 20px;">Search</button>
@@ -192,42 +197,66 @@
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <!-- Add Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script type="text/javascript">
         $(document).ready(function() {
             console.log('jQuery loaded');
+
+            // Initialize Select2 for multiselect
+            $('#role').select2({
+                placeholder: "Select roles",
+                allowClear: true
+            });
+            $('#block').select2({
+                placeholder: "Select blocks",
+                allowClear: true
+            });
 
             // Parse role-block data
             var roleBlockData = {{ role_block_data|safe }};
             console.log('roleBlockData:', roleBlockData);
 
-            // Multilevel dropdown logic
+            // Pass selected_blocks to JavaScript
+            var selectedBlocks = {{ selected_blocks|safe }};
+            console.log('selectedBlocks:', selectedBlocks);
+
+            // Multilevel dropdown logic for multiselect
             var $roleSel = $('#role');
             var $blockSel = $('#block');
 
             $roleSel.on('change', function() {
-                var role = $(this).val();
-                console.log('Selected role:', role);
-                $blockSel.empty().append('<option value="">Please select role first</option>');
+                var roles = $(this).val() || [];  // Get array of selected roles
+                console.log('Selected roles:', roles);
+                $blockSel.empty().append('<option value="">Select blocks</option>');
 
-                if (role && roleBlockData[role]) {
-                    var blocks = roleBlockData[role];
-                    console.log('Blocks for role:', blocks);
+                if (roles.length > 0) {
+                    // Collect all blocks associated with selected roles
+                    var allBlocks = new Set();
+                    roles.forEach(function(role) {
+                        if (roleBlockData[role]) {
+                            roleBlockData[role].forEach(function(block) {
+                                allBlocks.add(block);
+                            });
+                        }
+                    });
+                    var blocks = Array.from(allBlocks);
+                    console.log('Blocks for roles:', blocks);
                     $.each(blocks, function(index, block) {
                         $blockSel.append($('<option>', {
                             value: block,
                             text: block
                         }));
                     });
-                    // Restore selected block if present
-                    var selectedBlock = $blockSel.data('selected');
-                    if (selectedBlock && blocks.includes(selectedBlock)) {
-                        $blockSel.val(selectedBlock);
+                    // Restore selected blocks if present
+                    if (selectedBlocks.length > 0) {
+                        $blockSel.val(selectedBlocks).trigger('change');
                     }
                 }
             });
 
-            // Trigger change on page load to populate blocks if a role is selected
-            if ($roleSel.data('selected')) {
+            // Trigger change on page load to populate blocks if roles are selected
+            if ($roleSel.val()) {
                 $roleSel.trigger('change');
             }
 

@@ -141,12 +141,12 @@ SESSION_SAVE_EVERY_REQUEST = True  # Refresh session on every request
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Celery Configuration
-CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Redis as broker
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'  # R\edis for results
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
 
 # Celery Beat for scheduling
 CELERY_BEAT_SCHEDULE = {
