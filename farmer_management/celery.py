@@ -1,17 +1,24 @@
-import os
 from celery import Celery
 from celery.schedules import crontab
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'farmer_management.settings')
-
 app = Celery('farmer_management')
-app.config_from_object('django.conf:settings', namespace='CELERY')
-app.autodiscover_tasks()
+
+app.conf.update(
+    broker_url='redis://localhost:6379/0',
+    result_backend='redis://localhost:6379/0',
+    task_serializer='json',
+    accept_content=['json'],
+    result_serializer='json',
+    timezone='UTC',
+    enable_utc=True,
+)
+app.autodiscover_tasks(['farmers'])
 
 # Schedule the monthly report generation
 app.conf.beat_schedule = {
     'generate-monthly-report': {
-        'task': 'farmers.tasks.generate_monthly_report_task',
-        'schedule': crontab(day_of_month=1, hour=0, minute=0),  # Run on the 1st of each month at night
+        'task': 'farmers.tasks.run_monthly_farmer_report',
+        'schedule': crontab(day_of_month=1, hour=0, minute=0),  # Run on the 1st of each month at midnight
+        'args': (), #previous month
     },
 }
