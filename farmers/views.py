@@ -160,8 +160,11 @@ def admin_dashboard(request):
         role_blocks = role_users.filter(profile__block__isnull=False).values_list('profile__block__name', flat=True).distinct()
         role_block_data[role] = list(role_blocks)
     
-    # Fetch monthly reports
-    monthly_reports = MonthlyReport.objects.all().order_by('-year', '-month')
+    # Fetch monthly reports, only include those where the file exists
+    monthly_reports = [
+        report for report in MonthlyReport.objects.all().order_by('-year', '-month')
+        if os.path.exists(report.file_path)
+    ]
 
     return render(request, 'farmers/admin_dashboard.html', {
         'users': user_data,
