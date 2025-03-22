@@ -1,0 +1,1 @@
+Farmer Management System is a Django-based application for managing farmer data, supporting image uploads for Aadhar and farmer photos, with role-based access for Admin, Supervisor, and Surveyor, and automated monthly report generation using Celery Beat.
