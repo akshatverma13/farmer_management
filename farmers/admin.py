@@ -66,7 +66,7 @@ class FarmerAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request,
             'farmers/farmer_date_range_form.html',
-            {'form': form, 'title': 'Download Farmers CSV by Date Range'}
+            {'form': form, 'title': 'Download Farmers CSV'}
         )
 
     download_farmers_csv.short_description = "Download CSV of farmers by date range"
