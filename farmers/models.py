@@ -19,7 +19,7 @@ class UserProfile(models.Model):
     last_updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_profiles')
     last_updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='updated_profiles')
-    image = models.ImageField(upload_to='user_images/', null=True, blank=True, default='user_images/default.jpg')  # Added user profile image
+    image = models.ImageField(upload_to='user_images/', null=True, blank=True, default='user_images/default.jpg')
 
     class Meta:
         indexes = [models.Index(fields=['block', 'created_by'])]
@@ -53,8 +53,19 @@ class Farmer(models.Model):
         indexes = [models.Index(fields=['surveyor', 'block']), models.Index(fields=['created_by'])]
 
     def clean(self):
-        # Model-level validation
         validate_aadhar_id(self.aadhar_id)
 
     def __str__(self):
         return self.name
+
+class MonthlyReport(models.Model):
+    year = models.IntegerField()
+    month = models.IntegerField()
+    file_path = models.FilePathField(path='C:/Users/DELL/OneDrive/Desktop/project_new/farmer_management/reports/')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('year', 'month')
+
+    def __str__(self):
+        return f"Monthly Report {self.year}-{self.month:02d}"

@@ -1,0 +1,10 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <h1>{{ title }}</h1>
+  <form method="post">
+    {% csrf_token %}
+    <div>{{ form.as_p }}</div>
+    <button type="submit" name="apply">Download CSV</button>
+  </form>
+{% endblock %}

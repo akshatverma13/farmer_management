@@ -1,7 +1,6 @@
 from django.urls import path
 from . import views
 
-
 urlpatterns = [
     # UI Views (Frontend)
     path('', views.login_view, name='login'),
@@ -21,7 +20,8 @@ urlpatterns = [
     path('farmers/<int:id>/delete/', views.farmer_delete, name='farmer_delete'),
     path('users/<int:id>/profile/', views.user_profile, name='user_profile'),
     path('farmers/<int:id>/profile/', views.farmer_profile, name='farmer_profile'),
-   
+    path('download-farmers-csv/', views.download_farmers_csv, name='download_farmers_csv'),
+    path('download-monthly-report/<int:report_id>/', views.download_monthly_report, name='download_monthly_report'),
     
     # API Views
     path('api/login/', views.api_login, name='api_login'),
@@ -32,7 +32,4 @@ urlpatterns = [
     path('api/blocks/<int:id>/', views.api_blocks_detail, name='api_blocks_detail'),
     path('api/farmers/', views.api_farmers, name='api_farmers'),
     path('api/farmers/<int:id>/', views.api_farmers_detail, name='api_farmers_detail'),
-    # path('users/<int:id>/profile/', views.user_profile, name='user_profile'),
-    # # path('farmers/<int:id>/profile/', views.farmer_profile, name='farmer_profile'),
 ]
-

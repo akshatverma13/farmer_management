@@ -1,9 +1,9 @@
 from django.contrib.auth import authenticate, login, logout
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User, Group
-from .models import UserProfile, Block, Farmer
+from .models import UserProfile, Block, Farmer, MonthlyReport
 from django.db.models import Q
 from datetime import datetime
 import json
@@ -19,6 +19,8 @@ from .forms import UserProfileForm, FarmerForm, FarmerImageForm, FarmerAadharFor
 from django.utils import timezone
 from django.db import IntegrityError
 import redis
+import csv
+import os
 
 # Initialize Redis connection
 r = redis.Redis(host='localhost', port=6379, db=0)
@@ -93,7 +95,7 @@ def admin_dashboard(request):
     selected_roles = request.POST.getlist('role')  # Get multiple roles
     selected_blocks = request.POST.getlist('block')  # Get multiple blocks
     
-    if request.method == 'POST':
+    if request.method == 'POST' and 'role' in request.POST:
         if selected_roles:
             if 'Admin' in selected_roles:
                 users = users.filter(is_superuser=True)
@@ -124,7 +126,7 @@ def admin_dashboard(request):
             Q(name__icontains=block_query) |
             Q(id__icontains=block_query)
         )
-    if request.method == 'POST':
+    if request.method == 'POST' and 'role' in request.POST:
         if selected_blocks:
             blocks = blocks.filter(name__in=selected_blocks)
         elif selected_roles:
@@ -158,6 +160,9 @@ def admin_dashboard(request):
         role_blocks = role_users.filter(profile__block__isnull=False).values_list('profile__block__name', flat=True).distinct()
         role_block_data[role] = list(role_blocks)
     
+    # Fetch monthly reports
+    monthly_reports = MonthlyReport.objects.all().order_by('-year', '-month')
+
     return render(request, 'farmers/admin_dashboard.html', {
         'users': user_data,
         'blocks': block_data,
@@ -170,8 +175,65 @@ def admin_dashboard(request):
         'all_roles': all_roles,
         'role_block_data': json.dumps(role_block_data),
         'selected_roles': selected_roles,  # Pass list of selected roles
-        'selected_blocks': selected_blocks  # Pass list of selected blocks
+        'selected_blocks': selected_blocks,  # Pass list of selected blocks
+        'monthly_reports': monthly_reports,  # Pass monthly reports
     })
+
+def download_farmers_csv(request):
+    if not request.user.is_authenticated or not is_admin(request.user):
+        return redirect('login')
+
+    if request.method == 'POST':
+        start_date_str = request.POST.get('start_date')
+        end_date_str = request.POST.get('end_date')
+
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            messages.error(request, "Invalid date format. Please use YYYY-MM-DD.")
+            return redirect('admin_dashboard')
+
+        # Filter farmers by date range
+        farmers = Farmer.objects.filter(
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date
+        )
+
+        # Create CSV response
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="farmers_{start_date}_to_{end_date}.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow(['Name', 'Aadhar ID', 'Surveyor', 'Block', 'Farm Area', 'Created At'])
+
+        for farmer in farmers:
+            writer.writerow([
+                farmer.name,
+                farmer.aadhar_id,
+                farmer.surveyor.username if farmer.surveyor else 'N/A',
+                farmer.block.name if farmer.block else 'N/A',
+                farmer.farm_area,
+                farmer.created_at
+            ])
+
+        return response
+
+    return redirect('admin_dashboard')
+
+def download_monthly_report(request, report_id):
+    if not request.user.is_authenticated or not is_admin(request.user):
+        return redirect('login')
+
+    report = get_object_or_404(MonthlyReport, id=report_id)
+    if not os.path.exists(report.file_path):
+        messages.error(request, "Report file not found.")
+        return redirect('admin_dashboard')
+
+    with open(report.file_path, 'rb') as f:
+        response = HttpResponse(f.read(), content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="monthly_report_{report.year}-{report.month:02d}.csv"'
+        return response
 
 class ChangePasswordForm(forms.Form):
     current_password = forms.CharField(widget=forms.PasswordInput, label="Current Password")
@@ -208,7 +270,7 @@ def user_profile(request, id):
                     form.add_error('current_password', "Current password is incorrect.")
         elif 'upload_image' in request.POST:
             profile_form = UserProfileForm(request.POST, request.FILES, instance=profile)
-            if profile_form.is_valid():
+            if form.is_valid():
                 profile_form.save()
                 messages.success(request, "Profile image updated successfully.")
     
@@ -421,25 +483,6 @@ def surveyor_dashboard(request):
         'per_page': per_page
     })
 
-# def farmer_create(request):
-#     if not request.user.is_authenticated or not is_surveyor(request.user):
-#         return redirect('login')
-    
-#     if request.method == 'POST':
-#         form = FarmerForm(request.POST, surveyor=request.user)
-#         if form.is_valid():
-#             farmer = form.save(commit=False)
-#             farmer.surveyor = request.user
-#             farmer.created_by = request.user
-#             farmer.last_updated_by = request.user
-#             farmer.created_at = timezone.now()  # Set created_at
-#             farmer.save()
-#             return redirect('surveyor_dashboard')
-#         return render(request, 'farmers/farmer_form.html', {'form': form, 'title': 'Create'})
-#     else:
-#         form = FarmerForm(surveyor=request.user)
-#     return render(request, 'farmers/farmer_form.html', {'form': form, 'title': 'Create'})
-
 def farmer_create(request):
     if not request.user.is_authenticated or not is_surveyor(request.user):
         return redirect('login')
@@ -614,7 +657,6 @@ def api_users(request):
             return JsonResponse({'error': 'Invalid group or block ID'}, status=400)
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
-
 
 @csrf_exempt
 def api_users_detail(request, id):
@@ -836,6 +878,3 @@ def api_farmers_detail(request, id):
         return JsonResponse({'message': 'Farmer deleted'}, status=204)
 
     return JsonResponse({'error': 'Method not allowed'}, status=405)
-
-
-

@@ -22,6 +22,10 @@
         /* Style for Select2 */
         .select2-container { width: 200px !important; display: inline-block; margin-right: 20px; }
         .select2-selection__choice { background-color: #4CAF50 !important; color: white !important; }
+        /* Style for date range form */
+        .date-range-form { margin: 20px 0; }
+        .date-range-form label { margin-right: 10px; }
+        .date-range-form input[type="date"] { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
     </style>
 
     <div class="dashboard-container">
@@ -30,6 +34,40 @@
             <button onclick="window.location.href='{% url 'user_create' %}'" class="btn"><i class="fas fa-user-plus"></i> Create User</button>
             <button onclick="window.location.href='{% url 'block_create' %}'" class="btn" style="margin-left: 10px;"><i class="fas fa-plus"></i> Create Block</button>
         </div>
+
+        <!-- Farmer Date Range CSV Download Form -->
+        <div class="date-range-form">
+            <h3 style="color: #333;">Download Farmers CSV</h3>
+            <form method="post" action="{% url 'download_farmers_csv' %}">
+                {% csrf_token %}
+                <label for="start_date">Start Date:</label>
+                <input type="date" name="start_date" id="start_date" required>
+                <label for="end_date" style="margin-left: 20px;">End Date:</label>
+                <input type="date" name="end_date" id="end_date" required>
+                <button type="submit" class="btn" style="margin-left: 20px;">Download CSV</button>
+            </form>
+        </div>
+
+        <!-- Monthly Reports Section -->
+        <h3 style="color: #333;">Monthly Reports</h3>
+        {% if monthly_reports %}
+            <table>
+                <tr>
+                    <th>Year</th>
+                    <th>Month</th>
+                    <th>Download</th>
+                </tr>
+                {% for report in monthly_reports %}
+                    <tr>
+                        <td>{{ report.year }}</td>
+                        <td>{{ report.month }}</td>
+                        <td><a href="{% url 'download_monthly_report' report.id %}" style="color: #2196F3; text-decoration: none;">Download CSV</a></td>
+                    </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <p>No monthly reports available.</p>
+        {% endif %}
 
         <!-- Filter Section with Multiselect Dropdowns -->
         <form method="post" style="margin: 20px 0;" id="filter-form">
