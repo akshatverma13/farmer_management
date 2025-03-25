@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     'farmers',
     'django_filters',
     'django_celery_beat',
+    'rest_framework',
+    'rest_framework.authtoken',
 ]
 # AUTH_USER_MODEL = 'farmers.Users'
 
@@ -127,12 +129,23 @@ STATICFILES_DIRS = [BASE_DIR / 'farmers/static']
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# REST_FRAMEWORK = {
+#     'DEFAULT_AUTHENTICATION_CLASSES': [
+#         'rest_framework.authentication.TokenAuthentication',
+#         # or other authentication classes
+#     ],
+#     'DEFAULT_PERMISSION_CLASSES': [
+#         'rest_framework.permissions.IsAuthenticated',
+#         # or other permission classes
+#     ],
+# } for drf
 REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
-    ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
     ],
 }
 SESSION_COOKIE_AGE = 604800  # 7 days in seconds

@@ -8,6 +8,9 @@ from django.db.models import Q
 from datetime import datetime
 import json
 import uuid
+import redis
+import csv
+import os
 from django.shortcuts import render, redirect, get_object_or_404
 from .forms import UserForm, BlockCreateForm, BlockUpdateForm, FarmerForm
 from django.core.paginator import Paginator
@@ -18,9 +21,95 @@ from .models import Farmer
 from .forms import UserProfileForm, FarmerForm, FarmerImageForm, FarmerAadharForm, ChangePasswordForm
 from django.utils import timezone
 from django.db import IntegrityError
-import redis
-import csv
-import os
+from django.contrib.auth import authenticate
+from rest_framework import viewsets, status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.authtoken.models import Token
+from .serializers import FarmerSerializer, UserSerializer
+
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+
+# Login API to get token
+class LoginAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        user = authenticate(username=username, password=password)
+        if user:
+           
+            login(request, user)
+            token, created = Token.objects.get_or_create(user=user)
+            request.session['auth_token'] = token.key
+            print(f"Debug: Token created: {created}, Token key: {token.key}, User: {user}")
+            print(f"Debug: Token in DB: {Token.objects.filter(key=token.key).first()}")
+            return Response({'token': token.key, 'user_id': user.id}, status=status.HTTP_200_OK)
+        return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+#create users
+class UserCreateAPIView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        print(f"Debug: Request headers: {request.headers}")
+        print(f"Debug: Authenticated user: {request.user}")
+        if not request.user.is_staff:
+            return Response({'error': 'Only admins can create users'}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = UserSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+# create/list farmers
+class FarmerViewSet(viewsets.ModelViewSet):
+    queryset = Farmer.objects.all()
+    serializer_class = FarmerSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.groups.filter(name='Surveyors').exists():
+            return Farmer.objects.filter(surveyor=self.request.user)
+        return Farmer.objects.none()
+
+    def list(self, request, *args, **kwargs):
+        print(f"Debug: Listing farmers for user: {request.user}")
+        queryset = self.get_queryset()
+        print(f"Debug: Queryset: {queryset}")
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({'farmers': serializer.data}, status=status.HTTP_200_OK)
+
+    def create(self, request, *args, **kwargs):
+        print(f"Debug: Creating farmer - Request data: {request.data}")
+        print(f"Debug: Authenticated user: {request.user}")
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            print(f"Debug: Serializer errors: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def perform_create(self, serializer):
+        if not self.request.user.groups.filter(name='Surveyors').exists():
+            raise PermissionDenied("Only surveyors can create farmers")
+        created_at = serializer.validated_data.get('created_at', timezone.now())
+        serializer.save(
+            surveyor=self.request.user,
+            created_by=self.request.user,
+            last_updated_by=self.request.user,
+            created_at=created_at
+        )
 
 # Initialize Redis connection
 r = redis.Redis(host='localhost', port=6379, db=0)
@@ -30,17 +119,27 @@ def generate_token():
     return uuid.uuid4().hex  # 32-char token
 
 # Token validator (Using session)
+# def verify_token(request):
+#     auth_header = request.headers.get('Authorization', '')
+#     if not auth_header.startswith('Token '):
+#         return None
+#     token = auth_header.split(' ')[1]
+#     stored_token = request.session.get('auth_token')
+#     if stored_token != token or not request.session.session_key:
+#         return None
+#     if not request.user.is_authenticated:
+#         return None
+#     return request.user done for drf
 def verify_token(request):
     auth_header = request.headers.get('Authorization', '')
     if not auth_header.startswith('Token '):
         return None
-    token = auth_header.split(' ')[1]
-    stored_token = request.session.get('auth_token')
-    if stored_token != token or not request.session.session_key:
+    token_key = auth_header.split(' ')[1]
+    try:
+        token = Token.objects.get(key=token_key)
+        return token.user
+    except Token.DoesNotExist:
         return None
-    if not request.user.is_authenticated:
-        return None
-    return request.user
 
 # Role Check Helpers
 def is_admin(user):
@@ -807,36 +906,37 @@ def api_farmers(request):
             } for f in farmers
         ]
         return JsonResponse({'farmers': data}, status=200)
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-    elif request.method == 'POST':
-        if not is_surveyor(user):
-            return JsonResponse({'error': 'Only surveyors can create farmers'}, status=403)
-        try:
-            data = json.loads(request.body)
-            name = data.get('name')
-            aadhar_id = data.get('aadhar_id')
-            block_id = data.get('block_id')
-            farm_area = data.get('farm_area')
-            if not all([name, aadhar_id, block_id, farm_area]):
-                return JsonResponse({'error': 'Missing required fields'}, status=400)
-            if Farmer.objects.filter(aadhar_id=aadhar_id).exists():
-                return JsonResponse({'error': 'Aadhar ID already exists'}, status=400)
-            block = Block.objects.get(id=block_id)
-            if user.profile.block != block:
-                return JsonResponse({'error': 'You are not assigned to this block'}, status=403)
-            farmer = Farmer.objects.create(
-                name=name,
-                aadhar_id=aadhar_id,
-                block=block,
-                surveyor=user,
-                farm_area=farm_area,
-                created_by=user
-            )
-            return JsonResponse({'id': farmer.id, 'name': farmer.name}, status=201)
-        except Block.DoesNotExist:
-            return JsonResponse({'error': 'Block not found'}, status=404)
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    # elif request.method == 'POST':
+    #     if not is_surveyor(user):
+    #         return JsonResponse({'error': 'Only surveyors can create farmers'}, status=403)
+    #     try:
+    #         data = json.loads(request.body)
+    #         name = data.get('name')
+    #         aadhar_id = data.get('aadhar_id')
+    #         block_id = data.get('block_id')
+    #         farm_area = data.get('farm_area')
+    #         if not all([name, aadhar_id, block_id, farm_area]):
+    #             return JsonResponse({'error': 'Missing required fields'}, status=400)
+    #         if Farmer.objects.filter(aadhar_id=aadhar_id).exists():
+    #             return JsonResponse({'error': 'Aadhar ID already exists'}, status=400)
+    #         block = Block.objects.get(id=block_id)
+    #         if user.profile.block != block:
+    #             return JsonResponse({'error': 'You are not assigned to this block'}, status=403)
+    #         farmer = Farmer.objects.create(
+    #             name=name,
+    #             aadhar_id=aadhar_id,
+    #             block=block,
+    #             surveyor=user,
+    #             farm_area=farm_area,
+    #             created_by=user
+    #         )
+    #         return JsonResponse({'id': farmer.id, 'name': farmer.name}, status=201)
+    #     except Block.DoesNotExist:
+    #         return JsonResponse({'error': 'Block not found'}, status=404)
+    #     except json.JSONDecodeError:
+    #         return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
 @csrf_exempt
 def api_farmers_detail(request, id):
