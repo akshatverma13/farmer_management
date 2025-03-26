@@ -1,5 +1,11 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from . import views
+from .views import FarmerViewSet, LoginAPIView, UserCreateAPIView, LogoutAPIView
+
+# DRF Router for FarmerViewSet
+router = DefaultRouter()
+router.register(r'farmers', FarmerViewSet)
 
 urlpatterns = [
     # UI Views (Frontend)
@@ -23,14 +29,19 @@ urlpatterns = [
     path('download-farmers-csv/', views.download_farmers_csv, name='download_farmers_csv'),
     path('download-monthly-report/<int:report_id>/', views.download_monthly_report, name='download_monthly_report'),
     
-    # API Views
-    # path('api/login/', views.api_login, name='api_login'),
-    # path('api/logout/', views.api_logout, name='api_logout'), comment this both for drf
+    # Older API Views
+    path('api/login/', views.api_login, name='api_login'),
+    path('api/logout/', views.api_logout, name='api_logout'),
     path('api/users/', views.api_users, name='api_users'),
     path('api/users/<int:id>/', views.api_users_detail, name='api_users_detail'),
     path('api/blocks/', views.api_blocks, name='api_blocks'),
     path('api/blocks/<int:id>/', views.api_blocks_detail, name='api_blocks_detail'),
-    # path('api/farmers/', views.api_farmers, name='api_farmers'), I comment this  for drf
+    path('api/farmers/', views.api_farmers, name='api_farmers'),
     path('api/farmers/<int:id>/', views.api_farmers_detail, name='api_farmers_detail'),
-    path('api/legacy-farmers/', views.api_farmers, name='api_legacy_farmers'), # I add this for drf
+    
+    # DRF API Views 
+    path('drf/login/', LoginAPIView.as_view(), name='drf_login'),
+    path('drf/logout/', LogoutAPIView.as_view(), name='drf_logout'),
+    path('drf/users/', UserCreateAPIView.as_view(), name='drf_user_create'),
+    path('drf/', include(router.urls)),
 ]
