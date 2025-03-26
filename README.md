@@ -1,7 +1,7 @@
 # Farmer Management System
 
 ## Overview
-The **Farmer Management System** is a Django-based web application designed to manage farmer records across different geographical blocks. It provides role-based access control, allowing different types of users (admin, supervisor, surveyor) to perform specific actions based on their permissions. The system also includes asynchronous task processing using **Celery** for generating reports, with media and report files stored in the repository for easy setup.
+The **Farmer Management System** is a Django-based web application designed to manage farmer records across blocks. It provides role-based access control, allowing different types of users (admin, supervisor, surveyor) to perform specific actions based on their permissions. The system also includes asynchronous task processing using **Celery** for generating monthly reports, with media and report files stored in the repository.
 
 ## Features
 - **User Authentication and Role Management**:
@@ -44,6 +44,7 @@ pip install -r requirements.txt
 ### Run migrations
 Apply the necessary database migrations:
 ```bash
+python manage.py makemigrations
 python manage.py migrate
 ```
 
@@ -66,7 +67,7 @@ Group.objects.create(name='Supervisors')
 exit()
 ```
 
-### Start the Redis server (for Celery)
+### Start the Redis server (for Celery purpose)
 Ensure Redis is installed and running.
 
 - On Linux/macOS:
@@ -78,7 +79,8 @@ The default Redis URL is `redis://localhost:6379/0`.
 ### Start the Celery worker
 In a new terminal, start the Celery worker:
 ```bash
-celery -A farmer_management worker --loglevel=info
+celery -A farmer_management worker --loglevel=info -P eventlet
+celery -A farmer_management beat --loglevel=info
 ```
 
 ### Start the development server
