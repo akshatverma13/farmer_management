@@ -36,20 +36,15 @@ from rest_framework.permissions import AllowAny
 
 # Login API to get token
 class LoginAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [AllowAny]  # Allow unauthenticated access
 
     def post(self, request):
         username = request.data.get('username')
         password = request.data.get('password')
         user = authenticate(username=username, password=password)
         if user:
-           
-            login(request, user)
             token, created = Token.objects.get_or_create(user=user)
-            request.session['auth_token'] = token.key
-            print(f"Debug: Token created: {created}, Token key: {token.key}, User: {user}")
-            print(f"Debug: Token in DB: {Token.objects.filter(key=token.key).first()}")
-            return Response({'token': token.key, 'user_id': user.id}, status=status.HTTP_200_OK)
+            return Response({'token': token.key}, status=status.HTTP_200_OK)
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
 #create users
@@ -110,6 +105,16 @@ class FarmerViewSet(viewsets.ModelViewSet):
             last_updated_by=self.request.user,
             created_at=created_at
         )
+
+class LogoutAPIView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        # Delete the user's token to log them out
+        request.user.auth_token.delete()
+        return Response({'message': 'Successfully logged out'}, status=status.HTTP_200_OK)
+    
 
 # Initialize Redis connection
 r = redis.Redis(host='localhost', port=6379, db=0)

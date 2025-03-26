@@ -18,13 +18,14 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter #
-from farmers.views import FarmerViewSet, LoginAPIView, UserCreateAPIView
+from farmers.views import FarmerViewSet, LoginAPIView, UserCreateAPIView, LogoutAPIView
 
 router = DefaultRouter()
 router.register(r'farmers', FarmerViewSet)
 urlpatterns = [
     path('', include('farmers.urls')),
-    path('api/login/', LoginAPIView.as_view(), name='login'),
+    path('api/login/', LoginAPIView.as_view(), name='api_login'),
+    path('api/logout/', LogoutAPIView.as_view(), name='api_logout'),
     path('api/users/', UserCreateAPIView.as_view(), name='user-create'),
     path('api/', include(router.urls)),
     
