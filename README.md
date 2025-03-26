@@ -73,11 +73,6 @@ Ensure Redis is installed and running.
 ```bash
 redis-server
 ```
-
-- On Windows, install Redis or use a Docker container:
-```bash
-docker run -d -p 6379:6379 redis
-```
 The default Redis URL is `redis://localhost:6379/0`.
 
 ### Start the Celery worker
