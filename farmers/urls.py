@@ -24,8 +24,8 @@ urlpatterns = [
     path('download-monthly-report/<int:report_id>/', views.download_monthly_report, name='download_monthly_report'),
     
     # API Views
-    # path('api/login/', views.api_login, name='api_login'), I commet this for drf
-    path('api/logout/', views.api_logout, name='api_logout'),
+    # path('api/login/', views.api_login, name='api_login'),
+    # path('api/logout/', views.api_logout, name='api_logout'), comment this both for drf
     path('api/users/', views.api_users, name='api_users'),
     path('api/users/<int:id>/', views.api_users_detail, name='api_users_detail'),
     path('api/blocks/', views.api_blocks, name='api_blocks'),
