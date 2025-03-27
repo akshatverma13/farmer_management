@@ -110,6 +110,7 @@ class FarmerViewSet(viewsets.ModelViewSet):
             last_updated_by=self.request.user,
             created_at=created_at
         )
+        
 
 class LogoutAPIView(APIView):
     authentication_classes = [TokenAuthentication]
