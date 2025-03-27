@@ -24,7 +24,6 @@ class UserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(
         required=True,
         validators=[
-            EmailValidator(message="Enter a valid email address."),
             UniqueValidator(queryset=User.objects.all(), message="This email is already in use.")
         ]
     )
@@ -105,7 +104,10 @@ class FarmerSerializer(serializers.ModelSerializer):
         ]
     )
     name = serializers.CharField(
-        min_length = 3, 
+        min_length=3,
+        error_messages={
+            'min_length': "Name must be at least 3 characters long."
+        },
         validators=[
             name_validator
         ]
