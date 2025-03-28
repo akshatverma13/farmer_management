@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
-from celery.schedules import crontab
+# from celery.schedules import crontab
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-ajel-kli=_a4!t-r5!6906co9gy2)qswkirr!!+ehpb8a34=^5
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
 
 # Application definition
@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'farmers',
     'django_filters',
-    'django_celery_beat',
+    # 'django_celery_beat',
     'rest_framework',
     'rest_framework.authtoken',
 ]
@@ -156,21 +156,21 @@ SESSION_SAVE_EVERY_REQUEST = True  # Refresh session on every request
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Celery Configuration
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'UTC'
-CELERY_ENABLE_UTC = True
-CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+# # Celery Configuration
+# CELERY_BROKER_URL = 'redis://localhost:6379/0'
+# CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+# CELERY_ACCEPT_CONTENT = ['json']
+# CELERY_TASK_SERIALIZER = 'json'
+# CELERY_RESULT_SERIALIZER = 'json'
+# CELERY_TIMEZONE = 'UTC'
+# CELERY_ENABLE_UTC = True
+# CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
-# Celery Beat for scheduling
-CELERY_BEAT_SCHEDULE = {
-    'generate-monthly-report': {
-        'task': 'farmer_management.farmers.tasks.run_monthly_farmer_report',
-        'schedule': crontab(day_of_month=1, hour=0, minute=0),
-        'args': (),
-    },
-}
+# # Celery Beat for scheduling
+# CELERY_BEAT_SCHEDULE = {
+#     'generate-monthly-report': {
+#         'task': 'farmer_management.farmers.tasks.run_monthly_farmer_report',
+#         'schedule': crontab(day_of_month=1, hour=0, minute=0),
+#         'args': (),
+#     },
+# }

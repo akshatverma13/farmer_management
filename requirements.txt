@@ -1,4 +1,4 @@
 Django>=3.2,<4.0
 djangorestframework>=3.12
-celery>=5.3
-redis>=4.0
+django-filter>=21.1
+Pillow>=10.1.0
