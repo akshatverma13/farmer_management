@@ -1,5 +1,5 @@
-# Use Python 3.9 slim as the base image
-FROM python:3.9-slim
+# Use base image
+FROM python:3.11-slim
 
 # Set environment variables to avoid writing .pyc files and ensure logs are displayed in real-time
 ENV PYTHONDONTWRITEBYTECODE=1
