@@ -8,7 +8,7 @@ from django.db.models import Q
 from datetime import datetime
 import json
 import uuid
-# import redis
+import redis
 import csv
 import os
 from django.shortcuts import render, redirect, get_object_or_404
@@ -122,8 +122,8 @@ class LogoutAPIView(APIView):
         request.user.auth_token.delete()
         return Response({'message': 'Successfully logged out'}, status=status.HTTP_200_OK)
 
-# # Initialize Redis connection
-# r = redis.Redis(host='localhost', port=6379, db=0)
+# Initialize Redis connection
+r = redis.Redis(host='localhost', port=6379, db=0)
 
 # Token generator
 def generate_token():

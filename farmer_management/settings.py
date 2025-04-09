@@ -11,7 +11,10 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
-# from celery.schedules import crontab
+from celery.schedules import crontab
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -40,7 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'farmers',
     'django_filters',
-    # 'django_celery_beat',
+    'django_celery_beat',
     'rest_framework',
     'rest_framework.authtoken',
 ]
@@ -156,21 +159,23 @@ SESSION_SAVE_EVERY_REQUEST = True  # Refresh session on every request
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# # Celery Configuration
-# CELERY_BROKER_URL = 'redis://localhost:6379/0'
-# CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
-# CELERY_ACCEPT_CONTENT = ['json']
-# CELERY_TASK_SERIALIZER = 'json'
-# CELERY_RESULT_SERIALIZER = 'json'
-# CELERY_TIMEZONE = 'UTC'
-# CELERY_ENABLE_UTC = True
-# CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+# Celery Configuration
+# Use 'redis' for Docker, '127.0.0.1' for local
+REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
+CELERY_BROKER_URL = f'redis://{REDIS_HOST}:6379/0'
+CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+CELERY_ENABLE_UTC = True
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
-# # Celery Beat for scheduling
-# CELERY_BEAT_SCHEDULE = {
-#     'generate-monthly-report': {
-#         'task': 'farmer_management.farmers.tasks.run_monthly_farmer_report',
-#         'schedule': crontab(day_of_month=1, hour=0, minute=0),
-#         'args': (),
-#     },
-# }
+# Celery Beat for scheduling
+CELERY_BEAT_SCHEDULE = {
+    'generate-monthly-report': {
+        'task': 'farmer_management.farmers.tasks.run_monthly_farmer_report',
+        'schedule': crontab(day_of_month=1, hour=0, minute=0),
+        'args': (),
+    },
+}

@@ -6,4 +6,31 @@ services:
     volumes:
       - .:/app
     environment:
+      - REDIS_HOST=redis
       - DEBUG=1
+    depends_on:
+      - redis
+  redis:
+    image: "redis:latest"
+    ports:
+      - "6379:6379"
+  celery:
+    build: .
+    command: celery -A farmer_management worker -l info
+    volumes:
+      - .:/app
+    environment:
+      - REDIS_HOST=redis
+    depends_on:
+      - web
+      - redis
+  celery-beat:
+    build: .
+    command: celery -A farmer_management beat -l info
+    volumes:
+      - .:/app
+    environment:
+      - REDIS_HOST=redis
+    depends_on:
+      - web
+      - redis
