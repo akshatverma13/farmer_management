@@ -1,6 +1,7 @@
 services:
   web:
     build: .
+    image: farmer_management-web:latest
     ports:
       - "8000:8000"
     volumes:
@@ -10,23 +11,23 @@ services:
       - DEBUG=1
     depends_on:
       - redis
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
   redis:
-    image: "redis:latest"
+    image: redis:latest
     ports:
       - "6379:6379"
   celery:
-    build: .
+    image: farmer_management-web:latest
+    volumes:
+      - .:/app
+    environment:
+      - REDIS_HOST=redis
+    depends_on:
+      - web
+      - redis
     command: celery -A farmer_management worker -l info
-    volumes:
-      - .:/app
-    environment:
-      - REDIS_HOST=redis
-    depends_on:
-      - web
-      - redis
   celery-beat:
-    build: .
-    command: celery -A farmer_management beat -l info
+    image: farmer_management-web:latest
     volumes:
       - .:/app
     environment:
@@ -34,3 +35,4 @@ services:
     depends_on:
       - web
       - redis
+    command: celery -A farmer_management beat -l info
